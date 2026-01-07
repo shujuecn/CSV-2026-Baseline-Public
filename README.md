@@ -126,12 +126,6 @@ tar -czvf preds.tar.gz preds/
 
 - 🏆 Use `--model Echocare` for the best performance.
 - 🪶 Use `--model UNet` for limited GPU memory.
-- 🧪 To regenerate a minimal dependency list:
-  ```bash
-  pip install pipreqs
-  pipreqs /absolute/path/to/baseline_release --force
-  ```
-
 
 ## 📚 Baseline Method Acknowledgement
 
