@@ -121,15 +121,13 @@ ATTENTION!
 
 This submission is for the validation phase. During this phase, the validation set images will be provided. 
 Participants are required to save their valid results in H5 format (the same format as the training set labels) 
-and convert them into the specified compressed package format for submission via the registration platform.
-
-During the testing phase, participants are required to submit their method in Docker format.
-
+and package them into "preds.tar.gz" format for submission via the registration platform.
 
 ```bash
 cd data/val
 tar -czvf preds.tar.gz preds/
 ```
+During the testing phase, participants are required to submit their method in Docker format.
 
 
 ## 🧠 7. Notes & Tips
