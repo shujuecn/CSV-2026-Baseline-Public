@@ -1,8 +1,8 @@
 # 🩺 CSV 2026 Challenge Baseline
 
 [![CSV 2026 Challenge Site](https://img.shields.io/badge/Official-FETUS%20Challenge-red?style=for-the-badge)](http://www.csv-isbi.net/)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.4+-orange?style=for-the-badge&logo=pytorch)
-![CUDA](https://img.shields.io/badge/CUDA-12.1-green?style=for-the-badge&logo=nvidia)
+![PyTorch]()
+![CUDA]()
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
 **🏆 Official Baseline for the CSV 2026 Challenge** —This repository provides the official baseline implementation for the **CSV Challenge**, It implements a semi-supervised UniMatch pipeline for **Carotid Plaque Segmentation and Vulnerability Assessment in Ultrasound**, and supports two backbones: a lightweight UNet and the high-performance Echocare encoder (SwinUNETR-based). For official rules, dataset downloads and the evaluation server, visit the [CSV 2026 challenge page](http://www.csv-isbi.net/)
