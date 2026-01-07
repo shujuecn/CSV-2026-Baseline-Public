@@ -34,7 +34,7 @@ def main():
     parser.add_argument("--seg_num_classes", type=int, default=3)
     parser.add_argument("--cls_num_classes", type=int, default=1)
     parser.add_argument("--resize_target", type=int, default=256)
-    
+
     parser.add_argument("--echo_care_ckpt", type=str, default="./pretrain/echocare_encoder.pth")
     parser.add_argument('--amp', type=bool, default=True, help='enable torch.cuda.amp')
     parser.add_argument('--amp-dtype', type=str, default='fp16', choices=['fp16', 'bf16'])

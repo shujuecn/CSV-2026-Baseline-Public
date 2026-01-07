@@ -12,9 +12,6 @@ logs/
 *.pth
 *.ckpt
 
-# Data
-data/
-dataset/
 
 # OS
 .DS_Store
