@@ -28,11 +28,26 @@ class CSVSemiDataset(Dataset):
         else:
             with open(self.json_file_path, mode='r') as f:
                 self.case_list = json.load(f)
-    
+
     def _read_pair(self, image_h5_file):
         with h5py.File(image_h5_file, 'r') as f:
             long_img = f['long_img'][:]
             trans_img = f['trans_img'][:]
+        # ensure float32 and normalize to [0,1] (many h5 stores 0-255)
+        long_img = long_img.astype(np.float32)
+        trans_img = trans_img.astype(np.float32)
+        # only scale if values appear to be in 0-255 range
+        try:
+            if long_img.max() > 1.0:
+                long_img = long_img / 255.0
+        except ValueError:
+            # empty arrays or unexpected shapes: skip scaling
+            pass
+        try:
+            if trans_img.max() > 1.0:
+                trans_img = trans_img / 255.0
+        except ValueError:
+            pass
         return long_img, trans_img
 
     def _read_label(self, label_h5_file):
