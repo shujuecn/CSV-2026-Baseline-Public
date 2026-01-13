@@ -32,9 +32,9 @@ class ValH5Dataset:
         long_t = torch.from_numpy(long_img).unsqueeze(0).float()
         trans_t = torch.from_numpy(trans_img).unsqueeze(0).float()
         # attempt normalization if values seem 0-255
-        if long_t.max() > 1.5:
+        if long_t.max() > 1.0:
             long_t = long_t / 255.0
-        if trans_t.max() > 1.5:
+        if trans_t.max() > 1.0:
             trans_t = trans_t / 255.0
         return p, long_t, trans_t, long_shape, trans_shape
 
