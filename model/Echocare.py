@@ -19,12 +19,12 @@ class _LoRA_qkv(nn.Module):
     """
 
     def __init__(
-            self,
-            qkv: nn.Module,
-            linear_a_q: nn.Module,
-            linear_b_q: nn.Module,
-            linear_a_v: nn.Module,
-            linear_b_v: nn.Module,
+        self,
+        qkv: nn.Module,
+        linear_a_q: nn.Module,
+        linear_b_q: nn.Module,
+        linear_a_v: nn.Module,
+        linear_b_v: nn.Module,
     ):
         super().__init__()
         self.qkv = qkv
@@ -40,8 +40,9 @@ class _LoRA_qkv(nn.Module):
         new_q = self.linear_b_q(self.linear_a_q(x))
         new_v = self.linear_b_v(self.linear_a_v(x))
         qkv[:, :, : self.dim] += new_q
-        qkv[:, :, -self.dim:] += new_v
+        qkv[:, :, -self.dim :] += new_v
         return qkv
+
 
 class SwinUNETR_Seg(nn.Module):
     """
@@ -49,12 +50,13 @@ class SwinUNETR_Seg(nn.Module):
     - encoder: SwinTransformer (in_chans=3)
     - decoder: UNETR-style blocks
     """
+
     def __init__(
         self,
         seg_num_classes: int,
         ssl_checkpoint: str = None,
         in_chans: int = 3,
-        r: int = 5
+        r: int = 5,
     ):
         super().__init__()
 
@@ -76,9 +78,11 @@ class SwinUNETR_Seg(nn.Module):
             spatial_dims=2,
             use_v2=True,
         )
-         
-        if ssl_checkpoint is not None: # pretrained weights
-            model_dict = torch.load(ssl_checkpoint, map_location="cpu")
+
+        if ssl_checkpoint is not None:  # pretrained weights
+            model_dict = torch.load(
+                ssl_checkpoint, map_location="cpu", weights_only=True
+            )
             if isinstance(model_dict, dict) and "state_dict" in model_dict:
                 model_dict = model_dict["state_dict"]
             # EchoCare mentions removing 'mask_token' from state_dict if present
@@ -87,7 +91,7 @@ class SwinUNETR_Seg(nn.Module):
             self.encoder.load_state_dict(model_dict, strict=False)
             print("Using pretrained self-supervised Swin backbone weights!")
 
-        self.w_As = []  
+        self.w_As = []
         self.w_Bs = []
 
         for name, module in self.encoder.named_modules():
@@ -100,20 +104,20 @@ class SwinUNETR_Seg(nn.Module):
                 w_b_linear_q = nn.Linear(r, dim, bias=False)
                 w_a_linear_v = nn.Linear(dim, r, bias=False)
                 w_b_linear_v = nn.Linear(r, dim, bias=False)
-                
+
                 self.w_As.append(w_a_linear_q)
                 self.w_Bs.append(w_b_linear_q)
                 self.w_As.append(w_a_linear_v)
                 self.w_Bs.append(w_b_linear_v)
 
                 module.qkv = _LoRA_qkv(
-                module.qkv,
-                w_a_linear_q,
-                w_b_linear_q,
-                w_a_linear_v,
-                w_b_linear_v,
-            )
-        
+                    module.qkv,
+                    w_a_linear_q,
+                    w_b_linear_q,
+                    w_a_linear_v,
+                    w_b_linear_v,
+                )
+
         self.reset_parameters()
 
         # Freeze original parameters; train LoRA parameters only
@@ -244,7 +248,7 @@ class SwinUNETR_Seg(nn.Module):
         self.out = UnetOutBlock(
             spatial_dims=spatial_dims,
             in_channels=decode_feature_size,
-            out_channels=seg_num_classes
+            out_channels=seg_num_classes,
         )
 
         # Bottleneck dimension for UniMatch head
@@ -272,7 +276,7 @@ class SwinUNETR_Seg(nn.Module):
         out = self.decoder1(dec0, enc0)
         logits = self.out(out)
         return logits
-    
+
     def reset_parameters(self) -> None:
         for w_A in self.w_As:
             nn.init.kaiming_uniform_(w_A.weight, a=math.sqrt(5))
@@ -287,6 +291,7 @@ class Echocare_UniMatch(nn.Module):
       - forward(x_long, x_trans, need_fp=False)
       - need_fp=True: returns (seg, seg_fp), (cls, cls_fp) matching UniMatch expectations
     """
+
     def __init__(
         self,
         in_chns: int,
@@ -310,7 +315,7 @@ class Echocare_UniMatch(nn.Module):
             in_chans=in_chans,
         )
 
-        bottleneck_dim = self.seg_net.bottleneck_dim * 2  
+        bottleneck_dim = self.seg_net.bottleneck_dim * 2
         hidden_dim = 512  # hidden dimension (can be adjusted, e.g., 1024//2)
 
         # Multi-label classification head (outputs logits -> sigmoid)
@@ -332,7 +337,7 @@ class Echocare_UniMatch(nn.Module):
           - need_fp=False: seg_logits (B,C,H,W), cls_logits (B,K)
           - need_fp=True : ((seg, seg_fp), (cls, cls_fp)) matching UniMatch expectations
         """
-        
+
         x = torch.cat((x_long, x_trans), dim=0)
 
         x3 = self.in_adapter(x)
@@ -349,26 +354,32 @@ class Echocare_UniMatch(nn.Module):
             p_enc4 = torch.cat([enc4, self.fp_dropout(enc4)], dim=0)
             p_dec4 = torch.cat([dec4, self.fp_dropout(dec4)], dim=0)
 
-            seg_logits = self.seg_net.decode(p_enc0, p_enc1, p_enc2, p_enc3, p_enc4, p_dec4)
-            
+            seg_logits = self.seg_net.decode(
+                p_enc0, p_enc1, p_enc2, p_enc3, p_enc4, p_dec4
+            )
+
             (seg_logits_LT, seg_logits_fp_LT) = seg_logits.chunk(2)
             (seg_logits_L, seg_logits_T) = seg_logits_LT.chunk(2)
             (seg_logits_fp_L, seg_logits_fp_T) = seg_logits_fp_LT.chunk(2)
 
-            embed = self._pool_embed(p_dec4) # 32
+            embed = self._pool_embed(p_dec4)  # 32
             (cls_logits_LT, cls_logits_fp_LT) = embed.chunk(2)
 
             cls_logits = torch.cat(cls_logits_LT.chunk(2), dim=-1)
             cls_logits_fp = torch.cat(cls_logits_fp_LT.chunk(2), dim=-1)
 
-            cls_logits =  self.cls_decoder(cls_logits)
-            cls_logits_fp =  self.cls_decoder(cls_logits_fp)
+            cls_logits = self.cls_decoder(cls_logits)
+            cls_logits_fp = self.cls_decoder(cls_logits_fp)
 
-            return (seg_logits_L, seg_logits_fp_L), (seg_logits_T, seg_logits_fp_T), (cls_logits, cls_logits_fp)
+            return (
+                (seg_logits_L, seg_logits_fp_L),
+                (seg_logits_T, seg_logits_fp_T),
+                (cls_logits, cls_logits_fp),
+            )
 
         # normal
         seg_logits = self.seg_net.decode(enc0, enc1, enc2, enc3, enc4, dec4)
-        
+
         (seg_logits_L, seg_logits_T) = seg_logits.chunk(2)
 
         embed = self._pool_embed(dec4)

@@ -13,6 +13,7 @@ class ValH5Dataset:
     """Simple dataset to iterate over val image .h5 files.
     Each file is expected to contain 'long_img' and 'trans_img' numpy arrays.
     """
+
     def __init__(self, images_dir):
         self.images_dir = images_dir
         self.paths = sorted(glob.glob(os.path.join(images_dir, "*.h5")))
@@ -55,7 +56,17 @@ def load_checkpoint(model, ckpt_path, device):
     return model
 
 
-def predict_and_save(model, device, file_path, long_t, trans_t, long_shape, trans_shape, resize_target, out_dir):
+def predict_and_save(
+    model,
+    device,
+    file_path,
+    long_t,
+    trans_t,
+    long_shape,
+    trans_shape,
+    resize_target,
+    out_dir,
+):
     model.eval()
     os.makedirs(out_dir, exist_ok=True)
     basename = os.path.basename(file_path)
@@ -67,14 +78,22 @@ def predict_and_save(model, device, file_path, long_t, trans_t, long_shape, tran
     xT = trans_t.unsqueeze(0).to(device)
 
     # resize to target (same as training) before forward
-    xL_r = F.interpolate(xL, (resize_target, resize_target), mode="bilinear", align_corners=False)
-    xT_r = F.interpolate(xT, (resize_target, resize_target), mode="bilinear", align_corners=False)
+    xL_r = F.interpolate(
+        xL, (resize_target, resize_target), mode="bilinear", align_corners=False
+    )
+    xT_r = F.interpolate(
+        xT, (resize_target, resize_target), mode="bilinear", align_corners=False
+    )
 
     with torch.no_grad():
         segL_logits, segT_logits, cls_logits = model(xL_r, xT_r)
         # upsample logits back to original sizes
-        segL_up = F.interpolate(segL_logits, long_shape, mode="bilinear", align_corners=False)
-        segT_up = F.interpolate(segT_logits, trans_shape, mode="bilinear", align_corners=False)
+        segL_up = F.interpolate(
+            segL_logits, long_shape, mode="bilinear", align_corners=False
+        )
+        segT_up = F.interpolate(
+            segT_logits, trans_shape, mode="bilinear", align_corners=False
+        )
         predL = torch.argmax(segL_up, dim=1).squeeze(0).cpu().numpy().astype(np.uint8)
         predT = torch.argmax(segT_up, dim=1).squeeze(0).cpu().numpy().astype(np.uint8)
         # classification prediction (optional)
@@ -91,13 +110,39 @@ def predict_and_save(model, device, file_path, long_t, trans_t, long_shape, tran
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Inference script for CSV challenge (Echocare)")
-    parser.add_argument("--val-dir", type=str, required=True,
-                        help="Path to validation folder that contains 'images' subfolder with .h5 files")
-    parser.add_argument("--checkpoint", type=str, default="./checkpoints/best.pth", help="Path to checkpoint (best.pth)")
-    parser.add_argument("--encoder-pth", type=str, default="./pretrain/echocare_encoder.pth", help="Pretrained encoder for Echocare")
-    parser.add_argument("--output-dir", type=str, default=None, help="Output directory under val (default: val/output)")
-    parser.add_argument("--resize-target", type=int, default=256, help="Resize input short side used during training")
+    parser = argparse.ArgumentParser(
+        description="Inference script for CSV challenge (Echocare)"
+    )
+    parser.add_argument(
+        "--val-dir",
+        type=str,
+        required=True,
+        help="Path to validation folder that contains 'images' subfolder with .h5 files",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="./checkpoints/best.pth",
+        help="Path to checkpoint (best.pth)",
+    )
+    parser.add_argument(
+        "--encoder-pth",
+        type=str,
+        default="./pretrain/echocare_encoder.pth",
+        help="Pretrained encoder for Echocare",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Output directory under val (default: val/output)",
+    )
+    parser.add_argument(
+        "--resize-target",
+        type=int,
+        default=256,
+        help="Resize input short side used during training",
+    )
     parser.add_argument("--gpu", type=str, default="0", help="CUDA device id")
     args = parser.parse_args()
 
@@ -113,7 +158,9 @@ def main():
     ds = ValH5Dataset(images_dir)
 
     # build model (Echocare)
-    model = Echocare_UniMatch(in_chns=1, seg_class_num=3, cls_class_num=1, encoder_pth=args.encoder_pth)
+    model = Echocare_UniMatch(
+        in_chns=1, seg_class_num=3, cls_class_num=1, encoder_pth=args.encoder_pth
+    )
     model = model.to(device)
 
     # load checkpoint
@@ -124,11 +171,19 @@ def main():
     print(f"Running inference on {len(ds)} files, saving to {out_dir}")
     for idx in range(len(ds)):
         p, long_t, trans_t, long_shape, trans_shape = ds[idx]
-        out_path = predict_and_save(model, device, p, long_t, trans_t, long_shape, trans_shape, args.resize_target, out_dir)
+        out_path = predict_and_save(
+            model,
+            device,
+            p,
+            long_t,
+            trans_t,
+            long_shape,
+            trans_shape,
+            args.resize_target,
+            out_dir,
+        )
         print(f"[{idx+1}/{len(ds)}] Saved: {out_path}")
 
 
 if __name__ == "__main__":
     main()
-
-
